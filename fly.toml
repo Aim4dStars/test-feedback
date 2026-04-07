@@ -1,4 +1,4 @@
-app = 'nsw-selective-exam-practice'
+app = 'test-feedback'
 primary_region = 'syd'
 
 [build]
