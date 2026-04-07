@@ -4,15 +4,19 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
+# Force public npm registry
+RUN npm config set registry https://registry.npmjs.org/
+
 # Install server dependencies
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN npm install
 
 # Install client dependencies (including devDeps for vite build)
-COPY client/ ./client/
+COPY client/package.json ./client/
 RUN cd client && npm install
 
-# Copy server code
+# Copy client source and server code
+COPY client/ ./client/
 COPY server ./server
 
 # Build the React frontend
@@ -25,7 +29,10 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json ./
+# Force public npm registry
+RUN npm config set registry https://registry.npmjs.org/
+
+COPY package.json ./
 RUN npm install --omit=dev
 
 COPY server ./server
