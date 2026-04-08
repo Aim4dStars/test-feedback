@@ -129,14 +129,32 @@ function parseAnswerKey(text) {
   const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = normalized.split('\n').map(l => l.trim()).filter(l => l);
 
+  // First pass: try "1 E" format (number + letter on same line)
   for (const line of lines) {
-    // Match lines like "1 E" or "12 A" — a number followed by a single letter
     const match = line.match(/^(\d{1,3})\s+([A-G])$/i);
     if (match) {
       answers.push({
         number: parseInt(match[1], 10),
         correct_answer: match[2].toUpperCase(),
       });
+    }
+  }
+
+  // Second pass: if no paired lines found, handle split-column format
+  // where numbers come first as a block, then letters as a block
+  if (answers.length === 0) {
+    const numbers = [];
+    const letters = [];
+    for (const line of lines) {
+      if (/^\d{1,3}$/.test(line)) {
+        numbers.push(parseInt(line, 10));
+      } else if (/^[A-G]$/i.test(line)) {
+        letters.push(line.toUpperCase());
+      }
+    }
+    const count = Math.min(numbers.length, letters.length);
+    for (let i = 0; i < count; i++) {
+      answers.push({ number: numbers[i], correct_answer: letters[i] });
     }
   }
 

@@ -82,20 +82,30 @@ The built client is served by Express at http://localhost:3001.
 
 ### Making a user an admin
 
-There is no admin UI — set it directly in the SQLite database:
+There is no admin UI — set it directly in the SQLite database.
+
+**Locally (using Node — no sqlite3 CLI needed):**
 
 ```bash
-# If running locally
-sqlite3 data/exam.db "UPDATE users SET is_admin = 1 WHERE username = 'your_username';"
+# List all users
+node -e "const {db}=require('./server/db'); console.log(db.prepare('SELECT id,username,is_admin FROM users').all());"
+
+# Make a user admin
+node -e "const {db}=require('./server/db'); db.prepare('UPDATE users SET is_admin=1 WHERE username=?').run('admin');"
+
+# Remove admin
+node -e "const {db}=require('./server/db'); db.prepare('UPDATE users SET is_admin=0 WHERE username=?').run('admin');"
 ```
 
+**On Fly.io:**
+
 ```bash
-# If running on Fly.io
 flyctl ssh console --app test-feedback
 sqlite3 /data/exam.db "UPDATE users SET is_admin = 1 WHERE username = 'your_username';"
+exit
 ```
 
-After updating, the user must log out and log back in to get a new JWT token with admin privileges.
+> After updating, the user must **log out and log back in** to get a new JWT token with admin privileges.
 
 ### Subscription tiers
 

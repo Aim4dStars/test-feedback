@@ -45,6 +45,12 @@ function initialize() {
     );
   `);
 
+  // Migrate users table: add is_admin if missing
+  const userInfo = db.prepare("PRAGMA table_info(users)").all();
+  if (userInfo.length > 0 && !userInfo.some(col => col.name === 'is_admin')) {
+    db.exec("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0");
+  }
+
   // Check if test_sessions needs user_id column
   const sessionInfo = db.prepare("PRAGMA table_info(test_sessions)").all();
   const hasUserId = sessionInfo.some(col => col.name === 'user_id');
