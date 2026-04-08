@@ -37,4 +37,11 @@ function optionalAuth(req, res, next) {
   next();
 }
 
-module.exports = { JWT_SECRET, authenticateToken, optionalAuth };
+function requireAdmin(req, res, next) {
+  if (!req.user || !req.user.is_admin) {
+    return res.status(403).json({ error: 'Admin access required.' });
+  }
+  next();
+}
+
+module.exports = { JWT_SECRET, authenticateToken, optionalAuth, requireAdmin };

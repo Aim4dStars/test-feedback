@@ -6,7 +6,7 @@ const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const { db } = require('../db');
 const { getTextByPage } = require('../pdf-pages');
-const { optionalAuth } = require('../middleware/auth');
+const { authenticateToken, requireAdmin } = require('../middleware/auth');
 
 const uploadsDir = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', 'uploads');
 
@@ -210,7 +210,7 @@ function extractOption(lines, letter) {
 }
 
 // Upload and parse PDF
-router.post('/', optionalAuth, upload.single('pdf'), async (req, res) => {
+router.post('/', authenticateToken, requireAdmin, upload.single('pdf'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No PDF file uploaded' });

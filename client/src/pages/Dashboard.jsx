@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [counts, setCounts] = useState({ maths: 0, reading: 0, thinking: 0, writing: 0 });
   const [progress, setProgress] = useState(null);
   const examType = localStorage.getItem('examType') || 'selective';
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
 
   useEffect(() => {
     getQuestionCounts(examType).then(setCounts).catch(console.error);
@@ -88,18 +89,20 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        <Link
-          to="/upload"
-          className="flex items-center gap-4 bg-white rounded-2xl p-6 hover:shadow-md transition-shadow border border-gray-100"
-        >
-          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-            <Upload className="w-6 h-6 text-green-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Upload Questions</h3>
-            <p className="text-gray-500 text-sm">Import from PDF</p>
-          </div>
-        </Link>
+        {user?.isAdmin && (
+          <Link
+            to="/upload"
+            className="flex items-center gap-4 bg-white rounded-2xl p-6 hover:shadow-md transition-shadow border border-gray-100"
+          >
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+              <Upload className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Upload Questions</h3>
+              <p className="text-gray-500 text-sm">Import from PDF</p>
+            </div>
+          </Link>
+        )}
 
         <Link
           to="/progress"

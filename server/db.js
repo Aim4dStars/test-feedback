@@ -40,6 +40,7 @@ function initialize() {
       display_name TEXT DEFAULT '',
       subscription_type TEXT NOT NULL DEFAULT 'free' CHECK(subscription_type IN ('free', 'basic', 'premium')),
       subscription_expires_at DATETIME,
+      is_admin INTEGER NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `);

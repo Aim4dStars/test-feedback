@@ -40,11 +40,12 @@ router.post('/register', async (req, res) => {
       displayName: displayName || '',
       subscriptionType: 'free',
       subscriptionExpiresAt: null,
+      isAdmin: false,
     };
 
     // Generate JWT
     const token = jwt.sign(
-      { id: user.id, username: user.username, subscription_type: 'free' },
+      { id: user.id, username: user.username, subscription_type: 'free', is_admin: false },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -81,10 +82,11 @@ router.post('/login', async (req, res) => {
       displayName: row.display_name,
       subscriptionType: row.subscription_type,
       subscriptionExpiresAt: row.subscription_expires_at,
+      isAdmin: !!row.is_admin,
     };
 
     const token = jwt.sign(
-      { id: row.id, username: row.username, subscription_type: row.subscription_type },
+      { id: row.id, username: row.username, subscription_type: row.subscription_type, is_admin: !!row.is_admin },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -109,6 +111,7 @@ router.get('/me', authenticateToken, (req, res) => {
     displayName: row.display_name,
     subscriptionType: row.subscription_type,
     subscriptionExpiresAt: row.subscription_expires_at,
+    isAdmin: !!row.is_admin,
     createdAt: row.created_at,
   });
 });

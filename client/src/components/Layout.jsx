@@ -5,7 +5,7 @@ import { BookOpen, Upload, BarChart3, Home, LogOut } from 'lucide-react';
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/test/setup', label: 'Start Test', icon: BookOpen },
-  { path: '/upload', label: 'Upload PDFs', icon: Upload },
+  { path: '/upload', label: 'Upload PDFs', icon: Upload, adminOnly: true },
   { path: '/progress', label: 'My Progress', icon: BarChart3 },
 ];
 
@@ -79,7 +79,7 @@ export default function Layout({ children }) {
             </div>
           </div>
           <nav className="flex gap-1">
-            {navItems.map(({ path, label, icon: Icon }) => {
+            {navItems.filter(item => !item.adminOnly || user?.isAdmin).map(({ path, label, icon: Icon }) => {
               const isActive = location.pathname === path;
               return (
                 <Link
