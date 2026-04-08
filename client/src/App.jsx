@@ -6,20 +6,30 @@ import TestSetup from './pages/TestSetup';
 import TestScreen from './pages/TestScreen';
 import Results from './pages/Results';
 import Progress from './pages/Progress';
+import Login from './pages/Login';
 
 function App() {
+  const token = localStorage.getItem('token');
+
   return (
     <Router>
-      <Layout>
+      {!token ? (
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/upload" element={<Upload />} />
-          <Route path="/test/setup" element={<TestSetup />} />
-          <Route path="/test/:sessionId" element={<TestScreen />} />
-          <Route path="/results/:sessionId" element={<Results />} />
-          <Route path="/progress" element={<Progress />} />
+          <Route path="*" element={<Login />} />
         </Routes>
-      </Layout>
+      ) : (
+        <Layout>
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/upload" element={<Upload />} />
+            <Route path="/test/setup" element={<TestSetup />} />
+            <Route path="/test/:sessionId" element={<TestScreen />} />
+            <Route path="/results/:sessionId" element={<Results />} />
+            <Route path="/progress" element={<Progress />} />
+            <Route path="/login" element={<Login />} />
+          </Routes>
+        </Layout>
+      )}
     </Router>
   );
 }

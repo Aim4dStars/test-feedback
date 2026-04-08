@@ -33,6 +33,22 @@ function initialize() {
   }
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      display_name TEXT DEFAULT '',
+      subscription_type TEXT NOT NULL DEFAULT 'free' CHECK(subscription_type IN ('free', 'basic', 'premium')),
+      subscription_expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Check if test_sessions needs user_id column
+  const sessionInfo = db.prepare("PRAGMA table_info(test_sessions)").all();
+  const hasUserId = sessionInfo.some(col => col.name === 'user_id');
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS questions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       subject TEXT NOT NULL CHECK(subject IN ('maths', 'reading', 'thinking', 'writing')),
@@ -53,6 +69,7 @@ function initialize() {
 
     CREATE TABLE IF NOT EXISTS test_sessions (
       id TEXT PRIMARY KEY,
+      user_id INTEGER DEFAULT NULL,
       subject TEXT NOT NULL,
       exam_type TEXT NOT NULL DEFAULT 'selective' CHECK(exam_type IN ('selective', 'oc')),
       total_questions INTEGER NOT NULL,
@@ -74,6 +91,11 @@ function initialize() {
       FOREIGN KEY (question_id) REFERENCES questions(id)
     );
   `);
+
+  // Migrate: add user_id to test_sessions if missing
+  if (sessionInfo.length > 0 && !hasUserId) {
+    db.exec(`ALTER TABLE test_sessions ADD COLUMN user_id INTEGER DEFAULT NULL`);
+  }
 }
 
 module.exports = { db, initialize };

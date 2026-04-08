@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Upload, BarChart3, Home } from 'lucide-react';
+import { BookOpen, Upload, BarChart3, Home, LogOut } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
@@ -14,9 +14,22 @@ const examTypeConfig = {
   oc: { title: 'NSW OC Test', subtitle: 'Year 5 • Practice & Progress' },
 };
 
+const subscriptionBadge = {
+  free: { className: 'bg-gray-100 text-gray-600', label: 'Free' },
+  basic: { className: 'bg-blue-100 text-blue-700', label: 'Basic' },
+  premium: { className: 'bg-amber-100 text-amber-700', label: 'Premium ⭐' },
+};
+
 export default function Layout({ children }) {
   const location = useLocation();
   const [examType, setExamType] = useState(() => localStorage.getItem('examType') || 'selective');
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.reload();
+  };
 
   const handleExamTypeChange = (type) => {
     if (type === examType) return;
@@ -84,6 +97,19 @@ export default function Layout({ children }) {
               );
             })}
           </nav>
+          {user && (
+            <div className="flex items-center gap-3 ml-4 pl-4 border-l border-gray-200">
+              <div className="text-right">
+                <p className="text-sm font-medium text-gray-700">{user.display_name || user.username}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${subscriptionBadge[user.subscription_type || 'free']?.className}`}>
+                  {subscriptionBadge[user.subscription_type || 'free']?.label}
+                </span>
+              </div>
+              <button onClick={handleLogout} title="Logout">
+                <LogOut className="w-5 h-5 text-gray-400 hover:text-red-500 transition-colors" />
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
