@@ -6,11 +6,12 @@ const { v4: uuidv4 } = require('uuid');
 // Start a new test session
 router.post('/start', (req, res) => {
   const { subject, questionCount, timeLimitMinutes } = req.body;
+  const exam_type = req.body.exam_type || 'selective';
 
   // Fetch random questions for the subject
   const questions = db.prepare(`
-    SELECT * FROM questions WHERE subject = ? ORDER BY RANDOM() LIMIT ?
-  `).all(subject, questionCount || 20);
+    SELECT * FROM questions WHERE exam_type = ? AND subject = ? ORDER BY RANDOM() LIMIT ?
+  `).all(exam_type, subject, questionCount || 20);
 
   if (questions.length === 0) {
     return res.status(400).json({ error: 'No questions available for this subject. Please upload a PDF first.' });
@@ -20,9 +21,9 @@ router.post('/start', (req, res) => {
   const timeLimitSeconds = (timeLimitMinutes || 30) * 60;
 
   db.prepare(`
-    INSERT INTO test_sessions (id, subject, total_questions, time_limit_seconds)
-    VALUES (?, ?, ?, ?)
-  `).run(sessionId, subject, questions.length, timeLimitSeconds);
+    INSERT INTO test_sessions (id, subject, exam_type, total_questions, time_limit_seconds)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(sessionId, subject, exam_type, questions.length, timeLimitSeconds);
 
   // Create answer placeholders
   const insertAnswer = db.prepare(`

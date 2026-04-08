@@ -62,14 +62,15 @@ export default function Upload() {
   const [files, setFiles] = useState([]);
   const [counts, setCounts] = useState({});
   const fileRefs = useRef({});
+  const examType = localStorage.getItem('examType') || 'selective';
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = () => {
-    getUploadedFiles().then(setFiles).catch(console.error);
-    getQuestionCounts().then(setCounts).catch(console.error);
+    getUploadedFiles(examType).then(setFiles).catch(console.error);
+    getQuestionCounts(examType).then(setCounts).catch(console.error);
   };
 
   const handleUpload = async (e, type) => {
@@ -81,7 +82,7 @@ export default function Upload() {
     setResults(prev => ({ ...prev, [type]: null }));
 
     try {
-      const data = await uploadPDF(file, subject, type);
+      const data = await uploadPDF(file, subject, type, examType);
       setResults(prev => ({ ...prev, [type]: data }));
       loadData();
     } catch (err) {

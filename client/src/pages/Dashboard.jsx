@@ -27,10 +27,11 @@ const subjectLabels = {
 export default function Dashboard() {
   const [counts, setCounts] = useState({ maths: 0, reading: 0, thinking: 0, writing: 0 });
   const [progress, setProgress] = useState(null);
+  const examType = localStorage.getItem('examType') || 'selective';
 
   useEffect(() => {
-    getQuestionCounts().then(setCounts).catch(console.error);
-    getProgress().then(setProgress).catch(console.error);
+    getQuestionCounts(examType).then(setCounts).catch(console.error);
+    getProgress(examType).then(setProgress).catch(console.error);
   }, []);
 
   const totalQuestions = Object.values(counts).reduce((a, b) => a + b, 0);
@@ -43,7 +44,10 @@ export default function Dashboard() {
           Welcome back! 👋
         </h2>
         <p className="text-gray-600 text-lg">
-          Ready to practice for the NSW Selective School Exam? Choose a subject to get started.
+          {examType === 'oc'
+            ? 'Ready to practice for the NSW OC Test? Choose a subject to get started.'
+            : 'Ready to practice for the NSW Selective School Exam? Choose a subject to get started.'
+          }
         </p>
       </div>
 

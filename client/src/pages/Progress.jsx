@@ -20,9 +20,10 @@ const subjectColors = {
 export default function Progress() {
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
+  const examType = localStorage.getItem('examType') || 'selective';
 
   useEffect(() => {
-    getProgress().then(d => {
+    getProgress(examType).then(d => {
       setProgress(d);
       setLoading(false);
     }).catch(() => setLoading(false));

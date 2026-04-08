@@ -21,8 +21,9 @@ function initialize() {
   const hasOptionE = tableInfo.some(col => col.name === 'option_e');
 
   const hasSourcePage = tableInfo.some(col => col.name === 'source_page');
+  const hasExamType = tableInfo.some(col => col.name === 'exam_type');
 
-  if (tableInfo.length > 0 && (!hasOptionE || !hasSourcePage)) {
+  if (tableInfo.length > 0 && (!hasOptionE || !hasSourcePage || !hasExamType)) {
     // Migrate: drop old tables and recreate (old CHECK constraints can't be altered in SQLite)
     db.exec(`
       DROP TABLE IF EXISTS test_answers;
@@ -35,6 +36,7 @@ function initialize() {
     CREATE TABLE IF NOT EXISTS questions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       subject TEXT NOT NULL CHECK(subject IN ('maths', 'reading', 'thinking', 'writing')),
+      exam_type TEXT NOT NULL DEFAULT 'selective' CHECK(exam_type IN ('selective', 'oc')),
       question_text TEXT NOT NULL,
       option_a TEXT NOT NULL,
       option_b TEXT NOT NULL,
@@ -52,6 +54,7 @@ function initialize() {
     CREATE TABLE IF NOT EXISTS test_sessions (
       id TEXT PRIMARY KEY,
       subject TEXT NOT NULL,
+      exam_type TEXT NOT NULL DEFAULT 'selective' CHECK(exam_type IN ('selective', 'oc')),
       total_questions INTEGER NOT NULL,
       time_limit_seconds INTEGER NOT NULL,
       started_at DATETIME DEFAULT CURRENT_TIMESTAMP,

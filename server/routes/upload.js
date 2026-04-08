@@ -220,6 +220,11 @@ router.post('/', upload.single('pdf'), async (req, res) => {
       return res.status(400).json({ error: 'Invalid subject. Must be one of: maths, reading, thinking, writing' });
     }
 
+    const exam_type = req.body.exam_type || 'selective';
+    if (!['selective', 'oc'].includes(exam_type)) {
+      return res.status(400).json({ error: 'Invalid exam_type. Must be "selective" or "oc".' });
+    }
+
     const uploadType = req.body.type || 'questions';
     if (!['questions', 'answers', 'answers_explained'].includes(uploadType)) {
       return res.status(400).json({ error: 'Invalid type. Must be "questions", "answers", or "answers_explained".' });
@@ -273,13 +278,13 @@ router.post('/', upload.single('pdf'), async (req, res) => {
       }
 
       const insert = db.prepare(`
-        INSERT INTO questions (subject, question_text, option_a, option_b, option_c, option_d, option_e, correct_answer, explanation, source_pdf, source_page, source_pdf_stored)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO questions (subject, exam_type, question_text, option_a, option_b, option_c, option_d, option_e, correct_answer, explanation, source_pdf, source_page, source_pdf_stored)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const insertAll = db.transaction((qs) => {
         for (const q of qs) {
-          insert.run(q.subject, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.option_e, q.correct_answer, q.explanation, q.source_pdf, q.source_page, q.source_pdf_stored);
+          insert.run(q.subject, exam_type, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.option_e, q.correct_answer, q.explanation, q.source_pdf, q.source_page, q.source_pdf_stored);
         }
       });
 
@@ -304,8 +309,8 @@ router.post('/', upload.single('pdf'), async (req, res) => {
       }
 
       const existingQuestions = db.prepare(
-        'SELECT id FROM questions WHERE subject = ? ORDER BY id'
-      ).all(subject);
+        'SELECT id FROM questions WHERE exam_type = ? AND subject = ? ORDER BY id'
+      ).all(exam_type, subject);
 
       const updateStmt = db.prepare(
         'UPDATE questions SET correct_answer = ? WHERE id = ?'
@@ -345,8 +350,8 @@ router.post('/', upload.single('pdf'), async (req, res) => {
       }
 
       const existingQuestions = db.prepare(
-        'SELECT id FROM questions WHERE subject = ? ORDER BY id'
-      ).all(subject);
+        'SELECT id FROM questions WHERE exam_type = ? AND subject = ? ORDER BY id'
+      ).all(exam_type, subject);
 
       const updateStmt = db.prepare(
         'UPDATE questions SET correct_answer = ?, explanation = ? WHERE id = ?'
@@ -383,25 +388,27 @@ router.post('/', upload.single('pdf'), async (req, res) => {
 
 // Get list of uploaded files
 router.get('/files', (req, res) => {
+  const exam_type = req.query.exam_type || 'selective';
   const files = db.prepare(`
-    SELECT source_pdf, subject, COUNT(*) as question_count, MIN(created_at) as uploaded_at
+    SELECT source_pdf, subject, exam_type, COUNT(*) as question_count, MIN(created_at) as uploaded_at
     FROM questions
-    WHERE source_pdf != ''
-    GROUP BY source_pdf, subject
+    WHERE source_pdf != '' AND exam_type = ?
+    GROUP BY source_pdf, subject, exam_type
     ORDER BY uploaded_at DESC
-  `).all();
+  `).all(exam_type);
   res.json(files);
 });
 
 // Get distinct sources grouped by subject
 router.get('/sources', (req, res) => {
+  const exam_type = req.query.exam_type || 'selective';
   const rows = db.prepare(`
     SELECT subject, source_pdf, COUNT(*) as question_count
     FROM questions
-    WHERE source_pdf != ''
+    WHERE source_pdf != '' AND exam_type = ?
     GROUP BY subject, source_pdf
     ORDER BY subject, source_pdf
-  `).all();
+  `).all(exam_type);
 
   const grouped = {};
   for (const row of rows) {

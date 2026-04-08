@@ -21,9 +21,10 @@ export default function TestSetup() {
   const [timeLimit, setTimeLimit] = useState(30);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
+  const examType = localStorage.getItem('examType') || 'selective';
 
   useEffect(() => {
-    getQuestionCounts().then(setCounts).catch(console.error);
+    getQuestionCounts(examType).then(setCounts).catch(console.error);
   }, []);
 
   const availableCount = counts[subject] || 0;
@@ -32,7 +33,7 @@ export default function TestSetup() {
     setStarting(true);
     setError(null);
     try {
-      const data = await startTest(subject, Math.min(questionCount, availableCount), timeLimit);
+      const data = await startTest(subject, Math.min(questionCount, availableCount), timeLimit, examType);
       navigate(`/test/${data.sessionId}`, { state: data });
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to start test');
