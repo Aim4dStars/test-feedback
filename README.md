@@ -1,13 +1,24 @@
-# NSW Selective Exam Practice
+# NSW Exam Practice
 
-A full-stack web app for practising NSW Selective High School exam questions. Upload PDF question papers, take timed tests, and track your progress.
+A full-stack web app for practising NSW Selective High School (Year 6) and OC Test (Year 5) exam questions. Upload PDF question papers, take timed tests, and track your progress.
 
 **Live App:** https://test-feedback.fly.dev/
+
+## Features
+
+- **Exam Type Switching** — toggle between Selective (Year 6) and OC (Year 5) with separate question banks and progress
+- **User Authentication** — login/register with JWT-based auth
+- **Admin-Only Uploads** — only admin users can upload PDF question papers
+- **Subscription Tiers** — Free, Basic, and Premium tiers
+- **PDF Upload** — upload exam PDFs and extract questions (admin only)
+- **Timed Tests** — configurable subject and question count
+- **Results Review** — see correct answers with explanations and source PDF pages
+- **Progress Tracking** — view historical scores and performance
 
 ## Tech Stack
 
 - **Frontend:** React 18 + Vite + Tailwind CSS + React Router
-- **Backend:** Express.js + better-sqlite3
+- **Backend:** Express.js + better-sqlite3 + JWT (jsonwebtoken + bcryptjs)
 - **Deployment:** Fly.io (Docker)
 
 ## Local URLs
@@ -17,6 +28,8 @@ A full-stack web app for practising NSW Selective High School exam questions. Up
 | Client  | http://localhost:5173            |
 | Server  | http://localhost:3001            |
 | Health  | http://localhost:3001/api/health |
+
+---
 
 ## Getting Started (Local Development)
 
@@ -48,6 +61,58 @@ npm start
 ```
 
 The built client is served by Express at http://localhost:3001.
+
+---
+
+## User Roles & Authentication
+
+### How it works
+
+- Users register and log in with username/password
+- JWT tokens are stored in the browser (localStorage)
+- The header shows the logged-in user, subscription badge, and logout button
+- The exam type toggle (Selective/OC) is in the header
+
+### Roles
+
+| Role    | Can take tests | Can view progress | Can upload PDFs |
+| ------- | -------------- | ----------------- | --------------- |
+| User    | ✅             | ✅                | ❌              |
+| Admin   | ✅             | ✅                | ✅              |
+
+### Making a user an admin
+
+There is no admin UI — set it directly in the SQLite database:
+
+```bash
+# If running locally
+sqlite3 data/exam.db "UPDATE users SET is_admin = 1 WHERE username = 'your_username';"
+```
+
+```bash
+# If running on Fly.io
+flyctl ssh console --app test-feedback
+sqlite3 /data/exam.db "UPDATE users SET is_admin = 1 WHERE username = 'your_username';"
+```
+
+After updating, the user must log out and log back in to get a new JWT token with admin privileges.
+
+### Subscription tiers
+
+| Tier    | Badge              |
+| ------- | ------------------ |
+| Free    | Gray "Free"        |
+| Basic   | Blue "Basic"       |
+| Premium | Amber "Premium ⭐" |
+
+Subscriptions can be updated via the API:
+
+```bash
+curl -X PUT http://localhost:3001/api/auth/subscription \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"subscriptionType": "premium"}'
+```
 
 ---
 
@@ -104,7 +169,13 @@ flyctl volumes create exam_data --region syd --size 1 --app test-feedback --yes
 > The volume name `exam_data` must match `[mounts] source` in `fly.toml`.
 > 1GB volume is within the free tier.
 
-### Step 5: Deploy
+### Step 5: Set a JWT secret (recommended for production)
+
+```bash
+flyctl secrets set JWT_SECRET="your-random-secret-here" --app test-feedback
+```
+
+### Step 6: Deploy
 
 ```bash
 flyctl deploy --no-cache
@@ -117,12 +188,21 @@ Fly.io will:
 2. Push the image to Fly.io's registry
 3. Create a machine and start the app
 
-### Step 6: Verify
+### Step 7: Verify and set up admin
 
 Your app will be available at:
 ```
 https://test-feedback.fly.dev/
 ```
+
+1. Register a user account in the app
+2. Make yourself admin:
+   ```bash
+   flyctl ssh console --app test-feedback
+   sqlite3 /data/exam.db "UPDATE users SET is_admin = 1 WHERE username = 'your_username';"
+   exit
+   ```
+3. Log out and log back in — you'll now see the "Upload PDFs" option
 
 Check status and logs:
 ```bash
@@ -215,7 +295,7 @@ flyctl apps destroy test-feedback --yes
 
 ### Redeploying after destroying
 
-After destroying, run these 3 commands to get the app back up:
+After destroying, run these commands to get the app back up:
 
 ```bash
 # 1. Create the app again
@@ -224,13 +304,16 @@ flyctl apps create test-feedback --org personal
 # 2. Recreate the persistent volume (old data is gone)
 flyctl volumes create exam_data --region syd --size 1 --app test-feedback --yes
 
-# 3. Deploy
+# 3. Set JWT secret
+flyctl secrets set JWT_SECRET="your-random-secret-here" --app test-feedback
+
+# 4. Deploy
 flyctl deploy --no-cache
 ```
 
 The app will be live again at https://test-feedback.fly.dev/
 
-> **Note:** The SQLite database starts fresh — you'll need to re-upload your question PDFs. The volume data from the previous deployment is not recoverable after destroy.
+> **Note:** The SQLite database starts fresh — you'll need to register again, set admin, and re-upload question PDFs.
 
 ### Remove just a specific machine (keep app)
 
@@ -252,7 +335,7 @@ flyctl volumes destroy <volume-id> --app test-feedback
 
 ```bash
 docker build -t test-feedback .
-docker run -p 8080:8080 test-feedback
+docker run -p 8080:8080 -e JWT_SECRET="your-secret" test-feedback
 ```
 
 App will be available at http://localhost:8080.
@@ -264,12 +347,13 @@ App will be available at http://localhost:8080.
 ```
 ├── client/              # React frontend (Vite)
 │   └── src/
-│       ├── pages/       # Dashboard, Upload, TestSetup, TestScreen, Results, Progress
-│       └── components/
+│       ├── pages/       # Login, Dashboard, Upload, TestSetup, TestScreen, Results, Progress
+│       └── components/  # Layout, PdfPageViewer, Timer
 ├── server/              # Express backend
 │   ├── index.js         # Entry point
 │   ├── db.js            # SQLite setup & migrations
-│   └── routes/          # questions, tests, progress, upload
+│   ├── middleware/       # auth.js (JWT auth, admin check)
+│   └── routes/          # auth, questions, tests, progress, upload
 ├── data/                # SQLite database (auto-created)
 ├── uploads/             # Uploaded PDF files
 ├── sample-questions/    # Sample NSW exam PDFs
@@ -279,14 +363,25 @@ App will be available at http://localhost:8080.
 └── fly.toml             # Fly.io deployment config
 ```
 
-## Features
+## API Endpoints
 
-- **PDF Upload** — upload exam PDFs and extract questions
-- **Timed Tests** — configurable subject and question count
-- **Results Review** — see correct answers with explanations and source PDF pages
-- **Progress Tracking** — view historical scores and performance
+| Method | Endpoint                        | Auth     | Description                  |
+| ------ | ------------------------------- | -------- | ---------------------------- |
+| POST   | `/api/auth/register`            | None     | Create account               |
+| POST   | `/api/auth/login`               | None     | Login                        |
+| GET    | `/api/auth/me`                  | Required | Get current user             |
+| PUT    | `/api/auth/subscription`        | Required | Update subscription          |
+| GET    | `/api/questions/counts`         | None     | Question counts by subject   |
+| POST   | `/api/upload`                   | Admin    | Upload PDF questions         |
+| POST   | `/api/tests/start`              | None     | Start a test session         |
+| POST   | `/api/tests/:id/answer`         | None     | Submit an answer             |
+| POST   | `/api/tests/:id/complete`       | None     | Complete a test              |
+| GET    | `/api/tests/:id/results`        | None     | Get test results             |
+| GET    | `/api/progress`                 | None     | Get progress stats           |
 
 ## Notes
 
 - The `.npmrc` file and Dockerfile both force `registry=https://registry.npmjs.org/` to ensure packages are always fetched from the public npm registry (not corporate Artifactory).
 - `package-lock.json` files are excluded from the Docker build via `.dockerignore` so the container always generates fresh ones from the public registry.
+- Set `JWT_SECRET` environment variable in production. The default is only for development.
+- The first registered user is not automatically admin — you must set `is_admin = 1` in the database manually.
