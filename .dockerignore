@@ -1,7 +1,9 @@
 node_modules
 client/node_modules
 client/dist
-data
+data/exam.db
+data/exam.db-wal
+data/exam.db-shm
 uploads
 .playwright-mcp
 *.log
