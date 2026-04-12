@@ -6,6 +6,7 @@ import TestSetup from './pages/TestSetup';
 import TestScreen from './pages/TestScreen';
 import Results from './pages/Results';
 import Progress from './pages/Progress';
+import Settings from './pages/Settings';
 import Login from './pages/Login';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
             <Route path="/test/:sessionId" element={<TestScreen />} />
             <Route path="/results/:sessionId" element={<Results />} />
             <Route path="/progress" element={<Progress />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
           </Routes>
         </Layout>

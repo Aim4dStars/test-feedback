@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { BookOpen, Upload, BarChart3, Home, LogOut } from 'lucide-react';
+import { BookOpen, Upload, BarChart3, Home, LogOut, Settings } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/test/setup', label: 'Start Test', icon: BookOpen },
   { path: '/upload', label: 'Upload PDFs', icon: Upload, adminOnly: true },
+  { path: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
   { path: '/progress', label: 'My Progress', icon: BarChart3 },
 ];
 
 const examTypeConfig = {
   selective: { title: 'NSW Selective Exam', subtitle: 'Year 6 • Practice & Progress' },
-  oc: { title: 'NSW OC Test', subtitle: 'Year 5 • Practice & Progress' },
+  oc: { title: 'NSW OC Test', subtitle: 'Year 4 • Practice & Progress' },
 };
 
 const subscriptionBadge = {
@@ -74,7 +75,7 @@ export default function Layout({ children }) {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                OC (Yr 5)
+                OC (Yr 4)
               </button>
             </div>
           </div>

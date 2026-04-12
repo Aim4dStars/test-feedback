@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calculator, BookText, Brain, PenTool, Play, AlertCircle } from 'lucide-react';
-import { getQuestionCounts, startTest } from '../api';
+import { getQuestionCounts, getTestConfig, startTest } from '../api';
 
 const subjectConfig = [
   { value: 'maths', label: 'Mathematics', icon: Calculator, color: 'bg-blue-500', lightColor: 'bg-blue-100 text-blue-600 border-blue-200' },
@@ -17,14 +17,18 @@ export default function TestSetup() {
   const navigate = useNavigate();
   const [counts, setCounts] = useState({});
   const [subject, setSubject] = useState('maths');
-  const [questionCount, setQuestionCount] = useState(20);
-  const [timeLimit, setTimeLimit] = useState(30);
+  const [questionCount, setQuestionCount] = useState(null);
+  const [timeLimit, setTimeLimit] = useState(null);
   const [error, setError] = useState(null);
   const [starting, setStarting] = useState(false);
   const examType = localStorage.getItem('examType') || 'selective';
 
   useEffect(() => {
     getQuestionCounts(examType).then(setCounts).catch(console.error);
+    getTestConfig(examType).then(config => {
+      if (questionCount === null) setQuestionCount(config.default_questions);
+      if (timeLimit === null) setTimeLimit(config.default_time_minutes);
+    }).catch(console.error);
   }, []);
 
   const availableCount = counts[subject] || 0;

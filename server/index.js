@@ -8,6 +8,7 @@ const testsRouter = require('./routes/tests');
 const progressRouter = require('./routes/progress');
 const uploadRouter = require('./routes/upload');
 const authRouter = require('./routes/auth');
+const settingsRouter = require('./routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -28,6 +29,7 @@ app.use('/api/questions', questionsRouter);
 app.use('/api/tests', testsRouter);
 app.use('/api/progress', progressRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/settings', settingsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

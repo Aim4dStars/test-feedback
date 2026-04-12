@@ -151,9 +151,11 @@ export default function Dashboard() {
       {totalQuestions === 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
           <p className="text-amber-800 font-medium">No questions loaded yet!</p>
-          <p className="text-amber-600 text-sm mt-1">
-            <Link to="/upload" className="underline">Upload a PDF</Link> to get started with practice tests.
-          </p>
+          {user?.isAdmin && (
+            <p className="text-amber-600 text-sm mt-1">
+              <Link to="/upload" className="underline">Upload a PDF</Link> to get started with practice tests.
+            </p>
+          )}
         </div>
       )}
     </div>

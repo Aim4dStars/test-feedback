@@ -103,6 +103,51 @@ function initialize() {
   if (sessionInfo.length > 0 && !hasUserId) {
     db.exec(`ALTER TABLE test_sessions ADD COLUMN user_id INTEGER DEFAULT NULL`);
   }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS test_config (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      exam_type TEXT NOT NULL UNIQUE CHECK(exam_type IN ('selective', 'oc')),
+      default_questions INTEGER NOT NULL DEFAULT 20,
+      default_time_minutes INTEGER NOT NULL DEFAULT 30,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    INSERT OR IGNORE INTO test_config (exam_type, default_questions, default_time_minutes) VALUES ('selective', 20, 30);
+    INSERT OR IGNORE INTO test_config (exam_type, default_questions, default_time_minutes) VALUES ('oc', 10, 10);
+  `);
+
+  // Seed default questions if the questions table is empty
+  const questionCount = db.prepare('SELECT COUNT(*) as count FROM questions').get();
+  if (questionCount.count === 0) {
+    const localSeedDir = path.join(__dirname, '..', 'data');
+    const dockerSeedDir = path.join(__dirname, '..', 'seed-data');
+    const seedDir = fs.existsSync(dockerSeedDir) ? dockerSeedDir : localSeedDir;
+    const seedFiles = ['seed-maths.json', 'seed-reading.json', 'seed-thinking.json'];
+    const insert = db.prepare(`
+      INSERT INTO questions (subject, exam_type, question_text, option_a, option_b, option_c, option_d, option_e, correct_answer, explanation, source_pdf, source_page, source_pdf_stored)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const seedAll = db.transaction(() => {
+      for (const file of seedFiles) {
+        const filePath = path.join(seedDir, file);
+        if (!fs.existsSync(filePath)) continue;
+        const questions = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        for (const q of questions) {
+          insert.run(
+            q.subject, q.exam_type || 'selective', q.question_text,
+            q.option_a, q.option_b, q.option_c, q.option_d, q.option_e || '',
+            q.correct_answer, q.explanation || '',
+            q.source_pdf || 'seed-questions', 0, ''
+          );
+        }
+      }
+    });
+
+    seedAll();
+    console.log('Seeded default questions.');
+  }
 }
 
 module.exports = { db, initialize };

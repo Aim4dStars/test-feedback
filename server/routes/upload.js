@@ -441,4 +441,89 @@ router.get('/sources', (req, res) => {
   res.json(grouped);
 });
 
+// Delete all questions from a specific uploaded PDF
+router.delete('/files', authenticateToken, requireAdmin, (req, res) => {
+  const { source_pdf, subject, exam_type } = req.body;
+
+  if (!source_pdf || !subject) {
+    return res.status(400).json({ error: 'source_pdf and subject are required.' });
+  }
+
+  const examType = exam_type || 'selective';
+
+  // Delete related test_answers first (foreign key)
+  const questionIds = db.prepare(
+    'SELECT id FROM questions WHERE source_pdf = ? AND subject = ? AND exam_type = ?'
+  ).all(source_pdf, subject, examType).map(q => q.id);
+
+  if (questionIds.length > 0) {
+    const placeholders = questionIds.map(() => '?').join(',');
+    db.prepare(`DELETE FROM test_answers WHERE question_id IN (${placeholders})`).run(...questionIds);
+  }
+
+  const result = db.prepare(
+    'DELETE FROM questions WHERE source_pdf = ? AND subject = ? AND exam_type = ?'
+  ).run(source_pdf, subject, examType);
+
+  res.json({ deleted: result.changes });
+});
+
+// Upload questions via JSON
+router.post('/json', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const { questions, exam_type } = req.body;
+    const examType = exam_type || 'selective';
+
+    if (!['selective', 'oc'].includes(examType)) {
+      return res.status(400).json({ error: 'Invalid exam_type.' });
+    }
+
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return res.status(400).json({ error: 'questions must be a non-empty array.' });
+    }
+
+    const validSubjects = ['maths', 'reading', 'thinking', 'writing'];
+    const validAnswers = ['A', 'B', 'C', 'D', 'E'];
+
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.question_text || !q.option_a || !q.option_b || !q.option_c || !q.option_d) {
+        return res.status(400).json({ error: `Question ${i + 1} is missing required fields.` });
+      }
+      if (!validSubjects.includes(q.subject)) {
+        return res.status(400).json({ error: `Question ${i + 1} has invalid subject "${q.subject}".` });
+      }
+      if (!validAnswers.includes(q.correct_answer)) {
+        return res.status(400).json({ error: `Question ${i + 1} has invalid correct_answer "${q.correct_answer}".` });
+      }
+    }
+
+    const insert = db.prepare(`
+      INSERT INTO questions (subject, exam_type, question_text, option_a, option_b, option_c, option_d, option_e, correct_answer, explanation, source_pdf, source_page, source_pdf_stored)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertAll = db.transaction((qs) => {
+      for (const q of qs) {
+        insert.run(
+          q.subject, examType, q.question_text,
+          q.option_a, q.option_b, q.option_c, q.option_d, q.option_e || '',
+          q.correct_answer, q.explanation || '',
+          q.source_pdf || 'json-upload', 0, ''
+        );
+      }
+    });
+
+    insertAll(questions);
+
+    res.json({
+      success: true,
+      questionsImported: questions.length,
+    });
+  } catch (error) {
+    console.error('JSON upload error:', error);
+    res.status(500).json({ error: 'Failed to import questions: ' + error.message });
+  }
+});
+
 module.exports = router;

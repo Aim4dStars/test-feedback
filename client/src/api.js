@@ -31,6 +31,10 @@ export const uploadPDF = (file, subject, type = 'questions', examType = 'selecti
 };
 export const getUploadedFiles = (examType = 'selective') =>
   api.get('/upload/files', { params: { exam_type: examType } }).then(r => r.data);
+export const deleteUploadedFile = (source_pdf, subject, exam_type = 'selective') =>
+  api.delete('/upload/files', { data: { source_pdf, subject, exam_type } }).then(r => r.data);
+export const uploadJSON = (questions, examType = 'selective') =>
+  api.post('/upload/json', { questions, exam_type: examType }).then(r => r.data);
 
 // Tests
 export const startTest = (subject, questionCount, timeLimitMinutes, examType = 'selective') =>
@@ -47,6 +51,12 @@ export const getProgress = (examType = 'selective') =>
   api.get('/progress', { params: { exam_type: examType } }).then(r => r.data);
 export const getSubjectProgress = (subject, examType = 'selective') =>
   api.get(`/progress/${subject}`, { params: { exam_type: examType } }).then(r => r.data);
+
+// Settings
+export const getTestConfig = (examType = 'selective') =>
+  api.get('/settings/test-config', { params: { exam_type: examType } }).then(r => r.data);
+export const updateTestConfig = (exam_type, default_questions, default_time_minutes) =>
+  api.put('/settings/test-config', { exam_type, default_questions, default_time_minutes }).then(r => r.data);
 
 // Auth
 export const login = (username, password) =>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, BookOpen, Key, GraduationCap } from 'lucide-react';
-import { uploadPDF, getUploadedFiles, getQuestionCounts } from '../api';
+import { Upload as UploadIcon, FileText, CheckCircle, AlertCircle, Loader2, BookOpen, Key, GraduationCap, Trash2, FileJson } from 'lucide-react';
+import { uploadPDF, getUploadedFiles, getQuestionCounts, deleteUploadedFile, uploadJSON } from '../api';
 
 const subjects = [
   { value: 'maths', label: 'Mathematics' },
@@ -61,7 +61,12 @@ export default function Upload() {
   const [errors, setErrors] = useState({});
   const [files, setFiles] = useState([]);
   const [counts, setCounts] = useState({});
+  const [deleting, setDeleting] = useState(null);
+  const [jsonUploading, setJsonUploading] = useState(false);
+  const [jsonResult, setJsonResult] = useState(null);
+  const [jsonError, setJsonError] = useState(null);
   const fileRefs = useRef({});
+  const jsonRef = useRef(null);
   const examType = localStorage.getItem('examType') || 'selective';
 
   useEffect(() => {
@@ -71,6 +76,45 @@ export default function Upload() {
   const loadData = () => {
     getUploadedFiles(examType).then(setFiles).catch(console.error);
     getQuestionCounts(examType).then(setCounts).catch(console.error);
+  };
+
+  const handleDelete = async (f) => {
+    if (!confirm(`Delete ${f.question_count} questions from "${f.source_pdf}"?`)) return;
+    const key = `${f.source_pdf}-${f.subject}`;
+    setDeleting(key);
+    try {
+      await deleteUploadedFile(f.source_pdf, f.subject, examType);
+      loadData();
+    } catch (err) {
+      console.error(err);
+    }
+    setDeleting(null);
+  };
+
+  const handleJsonUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setJsonUploading(true);
+    setJsonError(null);
+    setJsonResult(null);
+
+    try {
+      const text = await file.text();
+      const questions = JSON.parse(text);
+      const data = await uploadJSON(questions, examType);
+      setJsonResult(data);
+      loadData();
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setJsonError({ error: 'Invalid JSON file. Please check the format.' });
+      } else {
+        setJsonError(err.response?.data || { error: err.message });
+      }
+    } finally {
+      setJsonUploading(false);
+      if (jsonRef.current) jsonRef.current.value = '';
+    }
   };
 
   const handleUpload = async (e, type) => {
@@ -197,6 +241,58 @@ export default function Upload() {
         );
       })}
 
+      {/* JSON Upload */}
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-teal-100 text-teal-700">
+            Alternative
+          </span>
+          <h3 className="font-semibold text-gray-900">Upload JSON File</h3>
+          <span className="text-sm text-gray-400">— Array of question objects with answers & explanations</span>
+        </div>
+
+        <label
+          className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
+            ${jsonUploading ? 'border-gray-200 bg-gray-50' : 'border-teal-300 hover:border-teal-400 hover:bg-teal-50'}`}
+        >
+          <input
+            ref={jsonRef}
+            type="file"
+            accept=".json"
+            onChange={handleJsonUpload}
+            disabled={jsonUploading}
+            className="hidden"
+          />
+          {jsonUploading ? (
+            <Loader2 className="w-10 h-10 text-gray-400 mx-auto animate-spin" />
+          ) : (
+            <FileJson className="w-10 h-10 text-teal-400 mx-auto" />
+          )}
+          <p className="mt-3 text-sm font-medium text-gray-700">
+            {jsonUploading ? 'Importing...' : 'Click to upload JSON'}
+          </p>
+          <p className="mt-1 text-xs text-gray-400">
+            Each object needs: subject, question_text, option_a–d, correct_answer, explanation
+          </p>
+        </label>
+
+        {jsonResult && (
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <p className="text-green-800 text-sm font-medium">
+              Imported {jsonResult.questionsImported} questions
+            </p>
+          </div>
+        )}
+
+        {jsonError && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <p className="text-red-800 text-sm font-medium">{jsonError.error}</p>
+          </div>
+        )}
+      </div>
+
       {/* Question counts */}
       <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
         <h3 className="font-semibold text-gray-900 mb-3">Question Bank</h3>
@@ -215,18 +311,29 @@ export default function Upload() {
         <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
           <h3 className="font-semibold text-gray-900 mb-3">Uploaded Files</h3>
           <div className="space-y-2">
-            {files.map((f, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700">{f.source_pdf}</span>
+            {files.map((f, i) => {
+              const key = `${f.source_pdf}-${f.subject}`;
+              return (
+                <div key={i} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm font-medium text-gray-700">{f.source_pdf}</span>
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <span className="capitalize">{f.subject}</span>
+                    <span>{f.question_count} questions</span>
+                    <button
+                      onClick={() => handleDelete(f)}
+                      disabled={deleting === key}
+                      className="text-red-400 hover:text-red-600 transition-colors disabled:text-gray-300"
+                      title="Delete questions from this PDF"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-500">
-                  <span className="capitalize">{f.subject}</span>
-                  <span>{f.question_count} questions</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
