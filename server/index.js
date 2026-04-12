@@ -36,6 +36,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+
 // Serve built frontend in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
 if (fs.existsSync(clientDist)) {

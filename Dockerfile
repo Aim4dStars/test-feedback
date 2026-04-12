@@ -36,7 +36,8 @@ COPY package.json ./
 RUN npm install --omit=dev
 
 COPY server ./server
-COPY data/seed-*.json ./seed-data/
+COPY data/selective/ ./seed-data/selective/
+COPY data/oc/ ./seed-data/oc/
 COPY --from=build /app/client/dist ./client/dist
 
 ENV PORT=8080
